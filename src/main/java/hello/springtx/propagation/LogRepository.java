@@ -20,6 +20,7 @@ public class LogRepository {
         log.info("log 저장");
         em.persist(logMessage);
 
+        // 메시지에 "로그예외"라는 문장이 포함되어 있으면 RuntimeException 던진다.
         if (logMessage.getMessage().contains("로그예외")) {
             log.info("log 저장시 예외 발생");
             throw new RuntimeException("예외 발생");
