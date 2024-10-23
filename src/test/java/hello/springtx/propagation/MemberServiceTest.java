@@ -23,7 +23,7 @@ class MemberServiceTest {
      * memberService    @Transactional : OFF
      * memberRepository @Transactional : ON (save 메서드)
      * logRepository    @Transactional : ON (save 메서드)
-     * 예외 처리 없음
+     * 예외 처리 없음 (joinV1)
      */
     @Test
     void outerTxOff_success() {
@@ -37,11 +37,12 @@ class MemberServiceTest {
         assertTrue(memberRepository.find(username).isPresent());
         assertTrue(logRepository.find(username).isPresent());
     }
+
     /**
      * memberService    @Transactional : OFF
      * memberRepository @Transactional : ON (save 메서드)
      * logRepository    @Transactional : ON (save 메서드), 예외 발생
-     * 예외 처리 없음
+     * 예외 처리 없음 (joinV1)
      */
     @Test
     void outerTxOff_fail() {
@@ -55,5 +56,25 @@ class MemberServiceTest {
         //then : member는 저장되고, log는 롤백되어 저장 안됨.
         assertTrue(memberRepository.find(username).isPresent());
         assertTrue(logRepository.find(username).isEmpty());
+    }
+
+
+    /**
+     * memberService    @Transactional : ON
+     * memberRepository @Transactional : OFF (save 메서드)
+     * logRepository    @Transactional : OFF (save 메서드)
+     * 예외 처리 없음 (joinV1)
+     */
+    @Test
+    void singleTx() {
+        //given
+        String username = "outerTxOff_success";
+
+        //when
+        memberService.joinV1(username);
+
+        //then : 모든 데이터가 정상 저장된다.
+        assertTrue(memberRepository.find(username).isPresent());
+        assertTrue(logRepository.find(username).isPresent());
     }
 }
