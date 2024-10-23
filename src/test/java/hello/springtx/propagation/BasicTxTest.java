@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.transaction.interceptor.DefaultTransactionAttribute;
@@ -146,5 +147,44 @@ public class BasicTxTest {
 //        txManager.commit(outer);
         Assertions.assertThatThrownBy(() -> txManager.commit(outer))
                 .isInstanceOf(UnexpectedRollbackException.class);
+    }
+
+    @Test
+    void inner_rollback_requires_new() {
+        log.info("외부 트랜잭션 시작");
+
+
+        log.info("외부 트랜잭션 시작");
+        TransactionStatus outer = txManager.getTransaction(new DefaultTransactionDefinition());
+        log.info("outer.isNewTransaction() = {}", outer.isNewTransaction());
+
+        /*
+        TransactionDefinition의 Propagation 기본값은 REQUIRED. 외부 트랜잭션(conn0)이 있으면 참여함.
+        여기서는 Propagation을 PROPAGATION_REQUIRES_NEW로 설정한 뒤 새로운 트랜잭션(conn1) 열었다.
+        외부 트랜잭션에 참여하는 것이 아니라, 새로운 물리적 트랜잭션을 연다.
+        외부 트랜잭션은 새로운 트랜잭션이 완료될 때까지 연기된다.
+         */
+        log.info("내부 트랜잭션 시작");
+        DefaultTransactionAttribute definition = new DefaultTransactionAttribute();
+        definition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        TransactionStatus inner = txManager.getTransaction(definition);
+        log.info("inner.isNewTransaction() = {}", inner.isNewTransaction()); //true
+
+        /*
+        내부 트랜잭션이 con1 물리적 트랜잭션을 롤백한다.
+        연기됐던 외부 트랜잭션을 재개한다.
+         */
+        log.info("내부 트랜잭션 롤백");
+        txManager.rollback(inner);
+
+        /*
+        외부 트랜잭션 커밋 요청이 들어오면, rollbackOnly 설정을 체크한다.
+        앞의 테스트에서 내부 트랜잭션이 논리 트랜잭션을 사용하여 롤백을 했을 경우에는 rollbackOnly가
+        같은 물리 트랜잭션 안의 모든 논리 트랜잭션에 전파된다.
+        그러나 지금은 다른 물리 트랜잭션임으로, rollbackOnly가 전파되지 않는다.
+        따라서 commit이 가능하다.
+         */
+        log.info("외부 트랜잭션 커밋");
+        txManager.commit(outer);
     }
 }
