@@ -30,6 +30,7 @@ public class MemberService {
     /*
      V1에 로그 저장 시 예외가 발생하면 이를 복구해 정상 흐름으로 전환하는 예외 처리 로직이 추가
      */
+    @Transactional
     public void joinV2(String username) {
         Member member = new Member(username);
         Log logMessage = new Log(username);
